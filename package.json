@@ -7,6 +7,8 @@
     "test": "test/test.sh",
     "coverage": "SOLIDITY_COVERAGE=true yarn test",
     "compile": "truffle compile",
+    "forge:build": "forge build",
+    "forge:test": "forge test",
     "flatten": "bash flatten.sh 2>/dev/null",
     "lint": "yarn run lint:js && yarn run lint:sol",
     "lint:js": "eslint .",
