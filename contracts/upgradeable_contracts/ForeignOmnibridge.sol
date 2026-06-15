@@ -4,19 +4,37 @@ import "./BasicOmnibridge.sol";
 import "./components/common/GasLimitManager.sol";
 import "./components/common/InterestConnector.sol";
 import "../libraries/SafeMint.sol";
+import "./InitializableForeign.sol";
 
 /**
  * @title ForeignOmnibridge
  * @dev Foreign side implementation for multi-token mediator intended to work on top of AMB bridge.
  * It is designed to be used as an implementation contract of EternalStorageProxy contract.
  */
-contract ForeignOmnibridge is BasicOmnibridge, GasLimitManager, InterestConnector {
+contract ForeignOmnibridge is InitializableForeign, BasicOmnibridge, GasLimitManager, InterestConnector {
     using SafeERC20 for IERC677;
     using SafeMint for IBurnableMintableERC677Token;
     using SafeMath for uint256;
 
     constructor(string memory _suffix) BasicOmnibridge(_suffix) {}
 
+    function initializeForVersion7(
+        uint256[3] calldata _hourlyLimitMaxPerTxMinPerTxArray, // [ 0 = _dailyLimit, 1 = _maxPerTx, 2 = _minPerTx ]
+        uint256[2] calldata _executionHourlyLimitExecutionMaxPerTxArray, // [ 0 = _executionDailyLimit, 1 = _executionMaxPerTx ]) external onlyRelevantSender returns (bool) {
+        address _tokenFactory
+    ) external onlyRelevantSender returns (bool) {
+        require(!isInitializedForVersion7(), "already initialized");
+
+        _setLimits(address(0), _hourlyLimitMaxPerTxMinPerTxArray);
+        _setExecutionLimits(address(0), _executionHourlyLimitExecutionMaxPerTxArray);
+
+        _setTokenFactory(_tokenFactory);
+
+        setInitializeForVersion7();
+        return isInitializedForVersion7();
+    }
+
+    // FCR: This is already initialized
     /**
      * @dev Stores the initial parameters of the mediator.
      * @param _bridgeContract the address of the AMB bridge contract.
@@ -64,6 +82,7 @@ contract ForeignOmnibridge is BasicOmnibridge, GasLimitManager, InterestConnecto
         _setTokenFactory(_tokenFactory);
     }
 
+    // FCR: updated fn
     /**
      * @dev Handles the bridged tokens.
      * Checks that the value is inside the execution limits and invokes the Mint or Unlock accordingly.
@@ -72,24 +91,20 @@ contract ForeignOmnibridge is BasicOmnibridge, GasLimitManager, InterestConnecto
      * @param _recipient address that will receive the tokens.
      * @param _value amount of tokens to be received.
      */
-    function _handleTokens(
-        address _token,
-        bool _isNative,
-        address _recipient,
-        uint256 _value
-    ) internal override {
+    function _handleTokens(address _token, bool _isNative, address _recipient, uint256 _value) internal override {
         // prohibit withdrawal of tokens during other bridge operations (e.g. relayTokens)
         // such reentrant withdrawal can lead to an incorrect balanceDiff calculation
         require(!lock());
 
         require(withinExecutionLimit(_token, _value));
-        addTotalExecutedPerDay(_token, getCurrentDay(), _value);
+        addTotalExecutedPerHour(_token, getCurrentHour(), _value);
 
         _releaseTokens(_isNative, _token, _recipient, _value, _value);
 
         emit TokensBridged(_token, _recipient, _value, messageId());
     }
 
+    // FCR: updated fn
     /**
      * @dev Executes action on deposit of bridged tokens
      * @param _token address of the token contract
@@ -114,7 +129,7 @@ contract ForeignOmnibridge is BasicOmnibridge, GasLimitManager, InterestConnecto
         }
 
         require(withinLimit(_token, _value));
-        addTotalSpentPerDay(_token, getCurrentDay(), _value);
+        addTotalSpentPerHour(_token, getCurrentHour(), _value);
 
         bytes memory data = _prepareMessage(nativeTokenAddress(_token), _token, _receiver, _value, _data);
         bytes32 _messageId = _passMessage(data, true);
@@ -129,13 +144,10 @@ contract ForeignOmnibridge is BasicOmnibridge, GasLimitManager, InterestConnecto
      * @param _value amount of tokens to unlock.
      * @param _balanceChange amount of balance to subtract from the mediator balance.
      */
-    function _releaseTokens(
-        bool _isNative,
-        address _token,
-        address _recipient,
-        uint256 _value,
-        uint256 _balanceChange
-    ) internal override {
+    function _releaseTokens(bool _isNative, address _token, address _recipient, uint256 _value, uint256 _balanceChange)
+        internal
+        override
+    {
         if (_isNative) {
             // There are two edge cases related to withdrawals on the foreign side of the bridge.
             // 1) Minting of extra STAKE tokens, if supply on the Home side exceeds total bridge amount on the Foreign side.

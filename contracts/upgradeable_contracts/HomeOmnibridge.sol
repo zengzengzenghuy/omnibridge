@@ -4,6 +4,7 @@ import "./BasicOmnibridge.sol";
 import "./modules/forwarding_rules/MultiTokenForwardingRulesConnector.sol";
 import "./modules/fee_manager/OmnibridgeFeeManagerConnector.sol";
 import "./modules/gas_limit/SelectorTokenGasLimitConnector.sol";
+import "./InitializableHome.sol";
 
 /**
  * @title HomeOmnibridge
@@ -11,6 +12,7 @@ import "./modules/gas_limit/SelectorTokenGasLimitConnector.sol";
  * It is designed to be used as an implementation contract of EternalStorageProxy contract.
  */
 contract HomeOmnibridge is
+    InitializableHome,
     BasicOmnibridge,
     SelectorTokenGasLimitConnector,
     OmnibridgeFeeManagerConnector,
@@ -21,6 +23,24 @@ contract HomeOmnibridge is
 
     constructor(string memory _suffix) BasicOmnibridge(_suffix) {}
 
+    // FCR: new initialize fn
+
+    function initializeForVersion9(
+        uint256[3] calldata _hourlyLimitMaxPerTxMinPerTxArray,
+        uint256[2] calldata _executionHourlyLimitExecutionMaxPerTxArray,
+        address _tokenFactory
+    ) external onlyRelevantSender returns (bool) {
+        require(!isInitializedForVersion9());
+        _setLimits(address(0), _hourlyLimitMaxPerTxMinPerTxArray);
+        _setExecutionLimits(address(0), _executionHourlyLimitExecutionMaxPerTxArray);
+        _setTokenFactory(_tokenFactory);
+
+        setInitializeForVersion9();
+
+        return isInitializedForVersion9();
+    }
+
+    // FCR: This function is already initialized
     /**
      * @dev Stores the initial parameters of the mediator.
      * @param _bridgeContract the address of the AMB bridge contract.
@@ -105,6 +125,7 @@ contract HomeOmnibridge is
         return nativeTokenAddress(_homeToken);
     }
 
+    // FCR: updated fn
     /**
      * @dev Handles the bridged tokens.
      * Checks that the value is inside the execution limits and invokes the Mint or Unlock accordingly.
@@ -113,18 +134,13 @@ contract HomeOmnibridge is
      * @param _recipient address that will receive the tokens.
      * @param _value amount of tokens to be received.
      */
-    function _handleTokens(
-        address _token,
-        bool _isNative,
-        address _recipient,
-        uint256 _value
-    ) internal override {
+    function _handleTokens(address _token, bool _isNative, address _recipient, uint256 _value) internal override {
         // prohibit withdrawal of tokens during other bridge operations (e.g. relayTokens)
         // such reentrant withdrawal can lead to an incorrect balanceDiff calculation
         require(!lock());
 
         require(withinExecutionLimit(_token, _value));
-        addTotalExecutedPerDay(_token, getCurrentDay(), _value);
+        addTotalExecutedPerHour(_token, getCurrentHour(), _value);
 
         uint256 valueToBridge = _value;
         uint256 fee = _distributeFee(FOREIGN_TO_HOME_FEE, _isNative, address(0), _token, valueToBridge);
@@ -139,6 +155,7 @@ contract HomeOmnibridge is
         emit TokensBridged(_token, _recipient, valueToBridge, _messageId);
     }
 
+    // FCR: updated fn
     /**
      * @dev Executes action on deposit of bridged tokens
      * @param _token address of the token contract
@@ -163,7 +180,7 @@ contract HomeOmnibridge is
         }
 
         require(withinLimit(_token, _value));
-        addTotalSpentPerDay(_token, getCurrentDay(), _value);
+        addTotalSpentPerHour(_token, getCurrentHour(), _value);
 
         address nativeToken = nativeTokenAddress(_token);
         uint256 fee = _distributeFee(HOME_TO_FOREIGN_FEE, nativeToken == address(0), _from, _token, _value);
@@ -190,10 +207,9 @@ contract HomeOmnibridge is
         uint256 gasLimit = _chooseRequestGasLimit(_data);
         IAMB bridge = bridgeContract();
 
-        return
-            _useOracleLane
-                ? bridge.requireToPassMessage(executor, _data, gasLimit)
-                : bridge.requireToConfirmMessage(executor, _data, gasLimit);
+        return _useOracleLane
+            ? bridge.requireToPassMessage(executor, _data, gasLimit)
+            : bridge.requireToConfirmMessage(executor, _data, gasLimit);
     }
 
     /**
