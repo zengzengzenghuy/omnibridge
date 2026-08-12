@@ -11,3 +11,5 @@ coverage.json
 e2e-tests/.env
 
 out/
+forge-cache/
+broadcast/

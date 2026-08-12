@@ -1,6 +1,7 @@
 [profile.default]
 src = "contracts"
 test = "foundry-tests"
+script = "foundry-scripts"
 out = "out"
 cache_path = "forge-cache"
 libs = ["lib"]
