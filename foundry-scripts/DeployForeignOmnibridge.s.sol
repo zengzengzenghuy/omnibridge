@@ -23,7 +23,7 @@ contract DeployForeignOmnibridge is Script {
         vm.startBroadcast(); 
         implementation = address(new ForeignOmnibridge(" from xDai"));
         vm.stopBroadcast();
-        // https://eth.blockscout.com/address/0x12F9EeD793b72De1571484E8B440834421180E1E
+        //  https://etherscan.io/address/0x00e7097e9c1ce7121fc466ff31a7c742d5a26ea2
         console.log("ForeignOmnibridge implementation:", implementation);
     }
 }

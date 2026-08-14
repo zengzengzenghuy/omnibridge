@@ -40,7 +40,7 @@ Three properties combine into an exploitable grief:
    router by the time `onTokenBridged` is invoked, so a failed callback leaves a half-completed claim rather than no claim.
 2. **The result is discarded**, so an out-of-gas callback is indistinguishable from success. The outer
    `handleNativeTokensAndCall` returns normally and the AMB marks the message executed.
-3. **The caller picks the gas.** `executeSignatures` and `safeExeucteSignaturesWith*` are permissionless — the signatures
+3. **The caller picks the gas.** `executeSignatures` and `safeExecuteSignaturesWith*` are permissionless — the signatures
    authorise the claim, not the sender — so _anyone_ can relay a validly signed message with a gas
    limit of their choosing. `safeExecuteSignaturesWithGasLimit(data, sigs, _gas)` takes `_gas`
    directly; plain `executeSignatures` takes it from the message header.

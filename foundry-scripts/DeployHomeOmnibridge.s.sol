@@ -23,7 +23,7 @@ contract DeployHomeOmnibridge is Script {
         vm.startBroadcast();
         implementation = address(new HomeOmnibridge(" from Mainnet"));
         vm.stopBroadcast();
-        // https://gnosisscan.io/address/0x982c5e7c36290a89c26011395cc9c33cc9743186
+        //  https://gnosisscan.io/address/0x992685a4117a5c217f3a0e33f735565ad132b12a
         console.log("HomeOmnibridge implementation:", implementation);
     }
 }

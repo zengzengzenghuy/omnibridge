@@ -4,8 +4,8 @@ pragma solidity 0.7.5;
 pragma abicoder v2;
 
 import {Test} from "forge-std/Test.sol";
-import {ForeignOmnibridge} from "../../contracts/upgradeable_contracts/ForeignOmnibridge.sol";
-import {EternalStorageProxy} from "../../contracts/upgradeability/EternalStorageProxy.sol";
+import {ForeignOmnibridge} from "../contracts/upgradeable_contracts/ForeignOmnibridge.sol";
+import {EternalStorageProxy} from "../contracts/upgradeability/EternalStorageProxy.sol";
 
 interface IBridgeValidators {
     function addValidator(address _validator) external;
