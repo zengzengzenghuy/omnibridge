@@ -145,7 +145,8 @@ splice() {
   printf '%s%s%s' "${code:0:$off}" "$val" "${code:$((off + 64))}"
 }
 
-sha256() { printf '%s' "$1" | xxd -r -p | shasum -a 256 | cut -d' ' -f1; }
+# sha256 of the 0x-prefixed hex string, i.e. the bytecode exactly as the explorer and the artifact show it.
+sha256_hex() { printf '0x%s' "$1" | shasum -a 256 | cut -d' ' -f1; }
 
 fail=0
 
@@ -155,7 +156,7 @@ verify() {
   echo "=== $name  ($addr)"
 
   local local_code onchain
-  local_code="$(jq -r '.deployedBytecode.object' "$artifact")"
+  local_code="$(jq -r '.deployedBytecode.object' "$artifact" | tr 'A-F' 'a-f')"
   local_code="${local_code#0x}"
 
   # SUFFIX_SIZE is AST id 2927, SUFFIX is 2929 (BasicOmnibridge.sol:43)
@@ -177,18 +178,18 @@ verify() {
   echo "  patching SUFFIX_SIZE @${off_size}  ${#suffix}"
   local_code="$(splice "$local_code" "$off_size" "$(bytes32_num "${#suffix}")")"
 
-  onchain="$(cast code "$addr" --rpc-url "$rpc")"
+  onchain="$(cast code "$addr" --rpc-url "$rpc" | tr 'A-F' 'a-f')"
   onchain="${onchain#0x}"
   if [ -z "$onchain" ]; then
     echo "  ! no code at $addr" >&2; fail=1; return
   fi
 
   local h_local h_chain
-  h_local="$(sha256 "$local_code")"
-  h_chain="$(sha256 "$onchain")"
+  h_local="$(sha256_hex "$local_code")"
+  h_chain="$(sha256_hex "$onchain")"
 
-  echo "  local  : $(( ${#local_code} / 2 )) bytes  sha256 $h_local"
-  echo "  onchain: $(( ${#onchain} / 2 )) bytes  sha256 $h_chain"
+  echo "  local  : $(( ${#local_code} / 2 )) bytes  sha256(hex) $h_local"
+  echo "  onchain: $(( ${#onchain} / 2 )) bytes  sha256(hex) $h_chain"
 
   if [ "$h_local" = "$h_chain" ]; then
     echo "  MATCH"
