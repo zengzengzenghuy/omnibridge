@@ -236,6 +236,34 @@ Test
 forge test --match-path foundry-tests/BasicOmnibridgeFix.t.sol --fork-url https://ethereum-rpc.publicnode.com
 ```
 
+# Verify
+
+[`verify.sh`](../verify.sh) checks the two implementations above for you. From a fresh clone:
+
+```
+./verify.sh
+```
+
+Expect this, with `MATCH` on both and exit code 0:
+
+```
+=== ForeignOmnibridge (Ethereum)  (0x00e7097e9c1ce7121fc466ff31a7c742d5a26ea2)
+  patching SUFFIX      @19913  " from xDai"
+  patching SUFFIX_SIZE @20046  10
+  local  : 23586 bytes  sha256 77819833bbde7083f2801ea62e4dc7387b3b7da31fb348af8f602a8c0416516d
+  onchain: 23586 bytes  sha256 77819833bbde7083f2801ea62e4dc7387b3b7da31fb348af8f602a8c0416516d
+  MATCH
+
+=== HomeOmnibridge (Gnosis)  (0x992685a4117a5c217f3a0e33f735565ad132b12a)
+  patching SUFFIX      @19722  " from Mainnet"
+  patching SUFFIX_SIZE @19855  13
+  local  : 24289 bytes  sha256 5fa169ca28a5e59972dfbd4746ff83ab9524771d0a2530b55beedfa2cddd6aa9
+  onchain: 24289 bytes  sha256 5fa169ca28a5e59972dfbd4746ff83ab9524771d0a2530b55beedfa2cddd6aa9
+  MATCH
+
+OK: both implementations match the local build.
+```
+
 # Audit
 
 [Audit report](./audit-tokenbridge-callback-gas-fix.pdf), [source](https://github.com/cducrest/audit-reports/blob/main/tokenbridge-callback-gas-fix.pdf)
