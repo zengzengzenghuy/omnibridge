@@ -35,9 +35,18 @@ TOOLCHAIN_DIR="$PWD/.toolchain"
 ETH_RPC_URL="${ETH_RPC_URL:-https://ethereum-rpc.publicnode.com}"
 GNOSIS_RPC_URL="${GNOSIS_RPC_URL:-https://rpc.gnosischain.com}"
 
-for dep in curl tar git jq shasum xxd; do
+for dep in curl tar git jq xxd; do
   command -v "$dep" >/dev/null 2>&1 || { printf 'missing dependency: %s\n' "$dep" >&2; exit 1; }
 done
+
+# sha256sum is coreutils (Linux); shasum is the Perl one shipped on macOS.
+if command -v sha256sum >/dev/null 2>&1; then
+  SHA256_CMD="sha256sum"
+elif command -v shasum >/dev/null 2>&1; then
+  SHA256_CMD="shasum -a 256"
+else
+  printf 'missing dependency: sha256sum or shasum\n' >&2; exit 1
+fi
 
 # ---------------------------------------------------------------- node
 ensure_node() {
@@ -146,7 +155,7 @@ splice() {
 }
 
 # sha256 of the 0x-prefixed hex string, i.e. the bytecode exactly as the explorer and the artifact show it.
-sha256_hex() { printf '0x%s' "$1" | shasum -a 256 | cut -d' ' -f1; }
+sha256_hex() { printf '0x%s' "$1" | $SHA256_CMD | cut -d' ' -f1; }
 
 fail=0
 

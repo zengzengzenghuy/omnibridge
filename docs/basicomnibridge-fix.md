@@ -268,7 +268,8 @@ The digest is over the `0x...` hex string, the same text the explorer and `out/*
 cross-check one by hand, note there must be no trailing newline:
 
 ```
-printf '%s' "0x6080..." | shasum -a 256
+printf '%s' "0x6080..." | sha256sum   # Linux
+printf '%s' "0x6080..." | shasum -a 256   # macOS
 ```
 
 # Audit
